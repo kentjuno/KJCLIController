@@ -9,12 +9,51 @@ use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
 
+use tracing::{error, info};
+
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
-use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
+use tray_icon::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 use tray_icon::{Icon, TrayIconBuilder};
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+
+/// Name of the HKCU\...\Run value used for "start with Windows".
+const RUN_VALUE_NAME: &str = "KJ CLIController";
+const RUN_KEY_PATH: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+
+/// Whether this app is registered to launch at user login.
+fn startup_is_enabled() -> bool {
+    use winreg::enums::HKEY_CURRENT_USER;
+    use winreg::RegKey;
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    match hkcu.open_subkey(RUN_KEY_PATH) {
+        Ok(run) => run.get_value::<String, _>(RUN_VALUE_NAME).is_ok(),
+        Err(_) => false,
+    }
+}
+
+/// Enable or disable launch at login by writing/removing the HKCU Run value.
+/// When enabling, the value is set to the quoted path of the current executable.
+fn set_startup(enabled: bool) -> std::io::Result<()> {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_WRITE};
+    use winreg::RegKey;
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if enabled {
+        let exe = std::env::current_exe()?;
+        let quoted = format!("\"{}\"", exe.display());
+        let (run, _) = hkcu.create_subkey(RUN_KEY_PATH)?;
+        run.set_value(RUN_VALUE_NAME, &quoted)?;
+    } else {
+        // Opening with write access; ignore "not found" when the value is already absent.
+        if let Ok(run) = hkcu.open_subkey_with_flags(RUN_KEY_PATH, KEY_WRITE) {
+            let _ = run.delete_value(RUN_VALUE_NAME);
+        }
+    }
+    Ok(())
+}
 
 /// Open a URL in the user's default browser without flashing a console window.
 fn open_url(url: &str) {
@@ -80,6 +119,14 @@ pub fn run_tray(port: u16, log_path: PathBuf) {
     let open_landing = MenuItem::new("Open Landing Page", true, None);
     let open_dashboard = MenuItem::new("Open Dashboard", true, None);
     let view_logs = MenuItem::new("View Logs", true, None);
+
+    // Settings submenu with a checkable "Start with Windows" toggle, initialized
+    // from the current registry state so the checkmark reflects reality on launch.
+    let start_with_windows =
+        CheckMenuItem::new("Start with Windows", true, startup_is_enabled(), None);
+    let settings = Submenu::new("Settings", true);
+    let _ = settings.append(&start_with_windows);
+
     let quit = MenuItem::new("Quit", true, None);
 
     let _ = menu.append_items(&[
@@ -88,6 +135,8 @@ pub fn run_tray(port: u16, log_path: PathBuf) {
         &open_landing,
         &open_dashboard,
         &view_logs,
+        &PredefinedMenuItem::separator(),
+        &settings,
         &PredefinedMenuItem::separator(),
         &quit,
     ]);
@@ -105,6 +154,7 @@ pub fn run_tray(port: u16, log_path: PathBuf) {
     let id_landing = open_landing.id().clone();
     let id_dashboard = open_dashboard.id().clone();
     let id_logs = view_logs.id().clone();
+    let id_startup = start_with_windows.id().clone();
     let id_quit = quit.id().clone();
 
     let landing_url = format!("http://localhost:{port}/");
@@ -122,6 +172,21 @@ pub fn run_tray(port: u16, log_path: PathBuf) {
                 open_url(&dashboard_url);
             } else if event.id == id_logs {
                 open_logs(&log_path);
+            } else if event.id == id_startup {
+                // muda has already toggled the visible checkmark; sync the registry
+                // to match it. If the registry write fails, revert the checkmark so
+                // the UI never lies about the actual startup state.
+                let desired = start_with_windows.is_checked();
+                match set_startup(desired) {
+                    Ok(()) => info!(
+                        "Start with Windows {}",
+                        if desired { "enabled" } else { "disabled" }
+                    ),
+                    Err(e) => {
+                        error!("Failed to update startup setting: {e}");
+                        start_with_windows.set_checked(!desired);
+                    }
+                }
             } else if event.id == id_quit {
                 std::process::exit(0);
             }

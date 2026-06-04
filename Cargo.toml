@@ -24,4 +24,5 @@ tracing-appender = "0.2"
 [target.'cfg(windows)'.dependencies]
 tray-icon = "0.19"
 tao = "0.30"
+winreg = "0.52"
 
