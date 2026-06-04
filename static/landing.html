@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KJ CLIController — Local AI CLI Gateway</title>
+<meta name="description" content="A secure Rust gateway exposing Claude Code, Gemini, and Codex CLIs through one OpenAI-compatible API.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0b0f19;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: rgba(11, 15, 25, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  transition: all 0.3s ease;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 2rem;
+}
+
+.nav-logo {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 1001;
+}
+
+.nav-toggle span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background-color: currentColor;
+  margin: 5px 0;
+  transition: all 0.3s ease;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  list-style: none;
+}
+
+.nav-links a {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.nav-links a:hover {
+  color: #06b6d4;
+}
+
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem 2rem 4rem;
+  background-color: #0b0f19;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(16, 185, 129, 0.05) 50%, rgba(11, 15, 25, 0) 100%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 800px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.hero-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #ffffff 30%, #a5f3fc 70%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: #94a3b8;
+  max-width: 600px;
+  margin-bottom: 2rem;
+  font-weight: 400;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.75rem;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+  color: #0b0f19;
+  border: none;
+  box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px 4px rgba(6, 182, 212, 0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #f8fafc;
+  border: 1px solid rgba(226, 238, 240, 0.2);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(6, 182, 212, 0.5);
+  color: #06b6d4;
+}
+
+#features {
+  padding: 6rem 2rem;
+  background-color: #0b0f19;
+  position: relative;
+}
+
+.features {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #ffffff 70%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.section-sub {
+  font-size: 1.1rem;
+  color: #94a3b8;
+  text-align: center;
+  margin-bottom: 3.5rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.feature-card {
+  background: rgba(15, 22, 36, 0.6);
+  border: 1px solid rgba(30, 41, 59, 0.7);
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(800px circle at var(--x, 0px) var(--y, 0px), rgba(6, 182, 212, 0.06), transparent 40%);
+  pointer-events: none;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(6, 182, 212, 0.15);
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: rgba(6, 182, 212, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #06b6d4;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.feature-card h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #f8fafc;
+}
+
+.feature-card p {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+#architecture {
+  padding: 6rem 2rem;
+  background-color: #0b0f19;
+  border-top: 1px solid rgba(30, 41, 59, 0.3);
+  position: relative;
+}
+
+.architecture {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.arch-diagram {
+  background: rgba(15, 22, 36, 0.5);
+  border: 1px solid rgba(30, 41, 59, 0.6);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+#providers {
+  padding: 6rem 2rem;
+  background-color: #0b0f19;
+  border-top: 1px solid rgba(30, 41, 59, 0.3);
+}
+
+.providers {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.provider-badge {
+  background: rgba(15, 22, 36, 0.6);
+  border: 1px solid rgba(30, 41, 59, 0.7);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.provider-badge:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(15, 22, 36, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.05);
+}
+
+.provider-badge svg {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.provider-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.provider-meta {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+#quickstart {
+  padding: 6rem 2rem;
+  background-color: #0b0f19;
+  border-top: 1px solid rgba(30, 41, 59, 0.3);
+}
+
+.quickstart {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.code-block {
+  background: #090d16;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: relative;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  overflow-x: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  margin-top: 2rem;
+}
+
+.code-block pre {
+  margin: 0;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(226, 238, 240, 0.1);
+  color: #94a3b8;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+  background: #06b6d4;
+  color: #0b0f19;
+  border-color: #06b6d4;
+}
+
+#api {
+  padding: 6rem 2rem;
+  background-color: #0b0f19;
+  border-top: 1px solid rgba(30, 41, 59, 0.3);
+}
+
+.api {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2.5rem;
+  background: rgba(15, 22, 36, 0.4);
+  border: 1px solid rgba(30, 41, 59, 0.6);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.api-table th, .api-table td {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+}
+
+.api-table th {
+  background: rgba(30, 41, 59, 0.4);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.api-table td {
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.api-table tr:last-child td {
+  border-bottom: none;
+}
+
+.api-table code {
+  font-family: 'Fira Code', monospace;
+  background: rgba(6, 182, 212, 0.1);
+  color: #06b6d4;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.site-footer {
+  background-color: #090d16;
+  border-top: 1px solid rgba(30, 41, 59, 0.5);
+  padding: 4rem 2rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #64748b;
+  position: relative;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+  }
+  
+  .nav-links {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #0b0f19;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+    flex-direction: column;
+    padding: 2rem;
+    gap: 1.5rem;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  }
+  
+  .nav-links.open {
+    display: flex;
+  }
+
+  .hero {
+    min-height: auto;
+    padding: 7rem 1.5rem 3rem;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.05rem;
+  }
+
+  .hero-cta {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .api-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .provider-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <nav class="nav">
+    <a class="nav-logo">KJ CLIController</a>
+    <button class="nav-toggle">☰</button>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#providers">Providers</a>
+      <a href="#quickstart">Quickstart</a>
+      <a href="#api">API</a>
+      <a href="#support">Support</a>
+    </div>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">One API. Every Local AI CLI.</h1>
+    <p class="hero-subtitle">KJ CLIController is a blazing-fast Rust gateway that wraps Claude Code, Gemini, and Codex CLIs behind a single OpenAI-compatible endpoint — fully local, fully secure, zero cloud round-trips.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#quickstart">Get Started</a>
+      <a class="btn btn-ghost" href="https://github.com/clicontroller/clicontroller">View on GitHub</a>
+    </div>
+  </div>
+  <div class="hero-visual"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" width="100%" height="100%" style="max-width: 520px; background: transparent; overflow: visible;">
+  <defs>
+    <linearGradient id="grad-cyan-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="grad-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g opacity="0.25">
+    <circle cx="120" cy="250" r="180" fill="none" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 8" />
+    <circle cx="120" cy="250" r="300" fill="none" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 8" />
+  </g>
+
+  <g filter="url(#glow)" opacity="0.4" stroke="url(#grad-glow)" stroke-width="6" fill="none">
+    <path d="M 120 250 C 250 250, 280 130, 450 130" />
+    <path d="M 120 250 C 250 250, 280 250, 480 250" />
+    <path d="M 120 250 C 250 250, 280 370, 450 370" />
+  </g>
+
+  <g stroke="url(#grad-cyan-emerald)" stroke-width="2.5" fill="none">
+    <path id="path-claude" d="M 120 250 C 250 250, 280 130, 450 130" stroke-dasharray="8 8">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="6s" repeatCount="indefinite" />
+    </path>
+    <path id="path-gemini" d="M 120 250 C 250 250, 280 250, 480 250" stroke-dasharray="8 8">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="5s" repeatCount="indefinite" />
+    </path>
+    <path id="path-codex" d="M 120 250 C 250 250, 280 370, 450 370" stroke-dasharray="8 8">
+      <animate attributeName="stroke-dashoffset" values="100;0" dur="7s" repeatCount="indefinite" />
+    </path>
+  </g>
+
+  <circle r="4" fill="#06b6d4" filter="url(#glow)">
+    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 120 250 C 250 250, 280 130, 450 130" />
+  </circle>
+  <circle r="4" fill="#10b981" filter="url(#glow)">
+    <animateMotion dur="2s" repeatCount="indefinite" path="M 120 250 C 250 250, 280 250, 480 250" />
+  </circle>
+  <circle r="4" fill="#06b6d4" filter="url(#glow)">
+    <animateMotion dur="3s" repeatCount="indefinite" path="M 120 250 C 250 250, 280 370, 450 370" />
+  </circle>
+
+  <circle cx="120" cy="250" r="32" fill="url(#grad-cyan-emerald)" opacity="0.15" filter="url(#glow-strong)">
+    <animate attributeName="r" values="32;42;32" dur="4s" repeatCount="indefinite" />
+  </circle>
+  
+  <circle cx="450" cy="130" r="24" fill="#06b6d4" opacity="0.1" filter="url(#glow)">
+    <animate attributeName="r" values="24;32;24" dur="3s" repeatCount="indefinite" />
+  </circle>
+
+  <circle cx="480" cy="250" r="24" fill="#10b981" opacity="0.1" filter="url(#glow)">
+    <animate attributeName="r" values="24;32;24" dur="3.5s" repeatCount="indefinite" />
+  </circle>
+
+  <circle cx="450" cy="370" r="24" fill="#06b6d4" opacity="0.1" filter="url(#glow)">
+    <animate attributeName="r" values="24;32;24" dur="2.8s" repeatCount="indefinite" />
+  </circle>
+
+  <g transform="translate(120, 250)">
+    <circle r="26" fill="#0f1624" stroke="url(#grad-cyan-emerald)" stroke-width="3" filter="url(#glow)" />
+    <circle r="14" fill="none" stroke="#06b6d4" stroke-width="1.5" />
+    <circle r="8" fill="none" stroke="#10b981" stroke-width="1.5" />
+    <circle r="3" fill="#ffffff" />
+  </g>
+
+  <g transform="translate(450, 130)">
+    <circle r="20" fill="#0f1624" stroke="#06b6d4" stroke-width="2" filter="url(#glow)" />
+    <path d="M -6 -4 L -2 0 L -6 4 M 0 3 L 5 3" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+  <g transform="translate(480, 250)">
+    <circle r="20" fill="#0f1624" stroke="#10b981" stroke-width="2" filter="url(#glow)" />
+    <path d="M -6 -4 L -2 0 L -6 4 M 0 3 L 5 3" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+  <g transform="translate(450, 370)">
+    <circle r="20" fill="#0f1624" stroke="#06b6d4" stroke-width="2" filter="url(#glow)" />
+    <path d="M -6 -4 L -2 0 L -6 4 M 0 3 L 5 3" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+  <style>
+    .label-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      fill: #ffffff;
+      text-anchor: middle;
+    }
+    .label-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      fill: #94a3b8;
+      text-anchor: middle;
+    }
+    .node-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      fill: #ffffff;
+    }
+    .node-tech {
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      fill: #06b6d4;
+    }
+  </style>
+
+  <text x="120" y="295" class="label-title">CLIController</text>
+  <text x="120" y="310" class="label-subtitle">Gateway API (Port 8080)</text>
+
+  <text x="485" y="130" class="node-text" dominant-baseline="middle">claude</text>
+  <text x="485" y="146" class="node-tech" dominant-baseline="middle" fill="#06b6d4">anthropic cli</text>
+
+  <text x="515" y="250" class="node-text" dominant-baseline="middle">gemini</text>
+  <text x="515" y="266" class="node-tech" dominant-baseline="middle" fill="#10b981">google cli</text>
+
+  <text x="485" y="370" class="node-text" dominant-baseline="middle">codex</text>
+  <text x="485" y="386" class="node-tech" dominant-baseline="middle" fill="#06b6d4">openai cli</text>
+</svg></div>
+</section>
+
+<section id="features" class="features">
+  <h2 class="section-title reveal">Everything You Need. Nothing You Don't.</h2>
+  <div class="feature-grid">
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">⚡</div>
+      <h3>OpenAI-Compatible Endpoint</h3>
+      <p>Drop CLIController into any project already talking to OpenAI. <code>POST /v1/chat/completions</code> speaks the exact same protocol — swap the base URL and you're done.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">🔀</div>
+      <h3>Multi-Model Subprocess Router</h3>
+      <p>Spawns <code>claude</code>, <code>agy</code>, and <code>codex</code> as native OS processes. No SDKs, no HTTP round-trips to the cloud — just your local binaries doing the work they were built for.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">💬</div>
+      <h3>Dynamic @-Mention Autocomplete</h3>
+      <p>The built-in dark-mode chat dashboard lets you switch models mid-conversation with an <code>@claude</code>, <code>@gemini</code>, or <code>@openai</code> mention — with real-time autocomplete suggestions.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">🔒</div>
+      <h3>Constant-Time Bearer Auth</h3>
+      <p>Every request is gated by a cryptographically safe, constant-time token comparison — eliminating timing side-channels and keeping your local network gateway locked tight.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">🖼️</div>
+      <h3>Image &amp; File Attachment Pipeline</h3>
+      <p>Attach images and documents directly in chat or via the API. Files are encoded as base64 data-URLs and routed seamlessly to whichever multi-modal CLI you've selected.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-icon">🏠</div>
+      <h3>Pure Local-First Routing</h3>
+      <p>Your prompts never leave the machine. CLIController routes exclusively over your local network — no external cloud APIs, no telemetry, no data leaving your control. Ever.</p>
+    </div>
+
+  </div>
+</section>
+
+<section id="architecture" class="architecture">
+  <h2 class="section-title reveal">How It Works</h2>
+  <p class="section-sub reveal">A single Rust binary sits between your clients and your local AI CLIs. Incoming OpenAI-shaped requests are authenticated, parsed, and dispatched as subprocesses — responses are streamed back in real time over the same connection.</p>
+  <div class="arch-diagram reveal"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%" style="background: transparent; overflow: visible;">
+  <defs>
+    <linearGradient id="grad-cyan-emerald-2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <filter id="glow-2" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+    </marker>
+    <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4" />
+    </marker>
+  </defs>
+
+  <style>
+    .arch-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      fill: #ffffff;
+    }
+    .arch-text {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      fill: #e2e8f0;
+    }
+    .arch-meta {
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      fill: #94a3b8;
+    }
+    .arch-tag {
+      font-family: 'Outfit', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      fill: #10b981;
+    }
+    .arch-box {
+      fill: #0f1624;
+      stroke: #1e293b;
+      stroke-width: 1.5;
+      rx: 8;
+    }
+    .arch-box-highlight {
+      fill: #0f1624;
+      stroke: url(#grad-cyan-emerald-2);
+      stroke-width: 2;
+      rx: 10;
+      filter: url(#glow-2);
+    }
+  </style>
+
+  <g fill="none" stroke-width="2">
+    <path d="M 190 200 L 274 200" stroke="#06b6d4" marker-end="url(#arrow-cyan)" />
+    <path d="M 500 200 L 540 200" stroke="#10b981" />
+    <path d="M 540 95 L 540 305" stroke="#10b981" />
+    <path d="M 540 95 L 574 95" stroke="#10b981" marker-end="url(#arrow)" />
+    <path d="M 540 200 L 574 200" stroke="#10b981" marker-end="url(#arrow)" />
+    <path d="M 540 305 L 574 305" stroke="#10b981" marker-end="url(#arrow)" />
+  </g>
+
+  <circle r="3.5" fill="#06b6d4" filter="url(#glow-2)">
+    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 190 200 L 280 200" />
+  </circle>
+  <circle r="3" fill="#10b981" filter="url(#glow-2)">
+    <animateMotion dur="3s" repeatCount="indefinite" path="M 500 200 L 540 200 L 540 95 L 580 95" />
+  </circle>
+  <circle r="3" fill="#10b981" filter="url(#glow-2)">
+    <animateMotion dur="2.8s" repeatCount="indefinite" path="M 500 200 L 540 200 L 580 200" />
+  </circle>
+  <circle r="3" fill="#10b981" filter="url(#glow-2)">
+    <animateMotion dur="3.2s" repeatCount="indefinite" path="M 500 200 L 540 200 L 540 305 L 580 305" />
+  </circle>
+
+  <g transform="translate(50, 150)">
+    <rect width="140" height="100" class="arch-box" />
+    <circle cx="25" cy="25" r="12" fill="rgba(6, 182, 212, 0.1)" stroke="#06b6d4" stroke-width="1" />
+    <path d="M 20 23 L 30 23 L 30 27 L 20 27 Z M 23 27 L 21 29 L 29 29 L 27 27" fill="none" stroke="#06b6d4" stroke-width="1.2" />
+    <text x="45" y="29" class="arch-title">LAN Clients</text>
+    <text x="15" y="55" class="arch-text" font-size="11">gRPC / REST</text>
+    <text x="15" y="72" class="arch-meta">Local Network</text>
+    <text x="15" y="85" class="arch-meta">Port 8080/443</text>
+  </g>
+
+  <g transform="translate(280, 120)">
+    <rect width="220" height="160" class="arch-box-highlight" />
+    <g transform="translate(20, 25)">
+      <circle cx="10" cy="5" r="12" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="1" />
+      <path d="M 5 2 L 10 7 L 15 2" fill="none" stroke="#10b981" stroke-width="1.5" />
+      <text x="30" y="9" class="arch-title" font-size="15">CLIController</text>
+    </g>
+    <rect x="15" y="55" width="190" height="38" fill="rgba(30, 41, 59, 0.4)" stroke="rgba(6, 182, 212, 0.3)" stroke-width="1" rx="4" />
+    <text x="25" y="70" class="arch-text" font-size="11">Axum HTTP/gRPC Server</text>
+    <text x="25" y="86" class="arch-meta">Rust (Tokio async)</text>
+
+    <rect x="15" y="102" width="190" height="38" fill="rgba(30, 41, 59, 0.4)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1" rx="4" />
+    <text x="25" y="117" class="arch-text" font-size="11">Bearer Auth Middleware</text>
+    <text x="25" y="133" class="arch-meta">Token Validation</text>
+  </g>
+
+  <g transform="translate(580, 60)">
+    <rect width="160" height="70" class="arch-box" />
+    <circle cx="20" cy="20" r="10" fill="rgba(6, 182, 212, 0.1)" stroke="#06b6d4" stroke-width="1" />
+    <path d="M 17 18 L 23 18 M 20 15 L 20 21" stroke="#06b6d4" stroke-width="1.2" />
+    <text x="38" y="24" class="arch-title" font-size="13">claude CLI</text>
+    <text x="15" y="48" class="arch-text" font-size="11">Anthropic Gateway</text>
+    <text x="15" y="60" class="arch-meta">Local process stdout</text>
+  </g>
+
+  <g transform="translate(580, 165)">
+    <rect width="160" height="70" class="arch-box" />
+    <circle cx="20" cy="20" r="10" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="1" />
+    <path d="M 20 15 L 22 18 L 25 20 L 22 22 L 20 25 L 18 22 L 15 20 L 18 18 Z" fill="#10b981" />
+    <text x="38" y="24" class="arch-title" font-size="13">agy CLI</text>
+    <text x="15" y="48" class="arch-text" font-size="11">Gemini / Custom Agent</text>
+    <text x="15" y="60" class="arch-meta">Local process stdout</text>
+  </g>
+
+  <g transform="translate(580, 270)">
+    <rect width="160" height="70" class="arch-box" />
+    <circle cx="20" cy="20" r="10" fill="rgba(6, 182, 212, 0.1)" stroke="#06b6d4" stroke-width="1" />
+    <path d="M 16 16 L 24 24 M 24 16 L 16 24" stroke="#06b6d4" stroke-width="1.2" />
+    <text x="38" y="24" class="arch-title" font-size="13">codex CLI</text>
+    <text x="15" y="48" class="arch-text" font-size="11">OpenAI / Codex Wrapper</text>
+    <text x="15" y="60" class="arch-meta">Local process stdout</text>
+  </g>
+</svg></div>
+</section>
+
+<section id="providers" class="providers">
+  <h2 class="section-title reveal">Supported Providers</h2>
+  <div class="provider-grid">
+
+    <div class="provider-badge reveal">
+      <span class="provider-name">claude</span>
+      <span class="provider-meta">Anthropic Claude Code CLI — powerful agentic coding with full filesystem context.</span>
+    </div>
+
+    <div class="provider-badge reveal">
+      <span class="provider-name">gemini</span>
+      <span class="provider-meta">Google Gemini / Antigravity CLI — next-generation multi-modal reasoning, locally routed.</span>
+    </div>
+
+    <div class="provider-badge reveal">
+      <span class="provider-name">openai</span>
+      <span class="provider-meta">OpenAI Codex CLI — battle-tested code generation running entirely on your hardware.</span>
+    </div>
+
+  </div>
+</section>
+
+<section id="quickstart" class="quickstart">
+  <h2 class="section-title reveal">Up in Seconds</h2>
+
+  <div class="code-block reveal">
+    <button class="copy-btn">Copy</button>
+    <pre><code># Clone and launch the gateway
+git clone https://github.com/clicontroller/clicontroller.git
+cd clicontroller
+cargo run --release
+# Open the chat dashboard → http://localhost:8080/</code></pre>
+  </div>
+
+  <div class="code-block reveal">
+    <button class="copy-btn">Copy</button>
+    <pre><code># Call the OpenAI-compatible endpoint from any HTTP client
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer my-secret-lan-token" \
+  -d '{
+    "model": "claude",
+    "messages": [
+      { "role": "user", "content": "Refactor this function to use iterators." }
+    ]
+  }'</code></pre>
+  </div>
+</section>
+
+<section id="api" class="api">
+  <h2 class="section-title reveal">API Reference</h2>
+  <table class="api-table">
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Endpoint</th>
+        <th>Auth</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="method post">POST</span></td>
+        <td><code>/v1/chat/completions</code></td>
+        <td>Bearer token</td>
+        <td>OpenAI-compatible chat endpoint. Route to any provider via the <code>model</code> field. Supports streaming, images, and file attachments.</td>
+      </tr>
+      <tr>
+        <td><span class="method get">GET</span></td>
+        <td><code>/api/providers</code></td>
+        <td>Bearer token</td>
+        <td>Returns the list of available CLI providers currently registered and reachable on this host.</td>
+      </tr>
+      <tr>
+        <td><span class="method post">POST</span></td>
+        <td><code>/api/upload</code></td>
+        <td>Bearer token</td>
+        <td>Upload images or documents. Files are stored as base64 data-URLs and returned as attachment references for use in chat messages.</td>
+      </tr>
+      <tr>
+        <td><span class="method get">GET</span></td>
+        <td><code>/api/guide</code></td>
+        <td>None</td>
+        <td>Interactive usage guide rendered in the built-in dark-mode dashboard. No auth required for local self-documentation.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="support" class="support" style="padding:5rem 1.5rem; text-align:center;">
+  <h2 class="section-title reveal">Support the Project ☕</h2>
+  <p class="section-sub reveal" style="max-width:640px; margin:0 auto;">KJ CLIController is free and open-source. If it saves you time, a small donation helps fund new features and keeps it maintained. Thank you for the support!</p>
+  <div class="reveal" style="display:flex; gap:2.5rem; flex-wrap:wrap; align-items:center; justify-content:center; max-width:820px; margin:2.5rem auto 0;">
+    <img src="https://img.vietqr.io/image/970422-999979798886-compact2.png?accountName=HUYNH%20HUU%20NHAN&addInfo=Donate%20KJ%20CLIController"
+         alt="MB Bank QR code — Huynh Huu Nhan"
+         width="300" loading="lazy"
+         style="border-radius:18px; border:1px solid #1e293b; background:#ffffff; padding:10px; box-shadow:0 12px 40px rgba(6,182,212,0.18);">
+    <div style="text-align:left; min-width:260px;">
+      <p style="margin:0 0 .25rem; color:#64748b; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em;">Bank</p>
+      <p style="margin:0 0 1.1rem; font-weight:600; font-size:1.15rem; color:#f8fafc;">MB Bank — Military Commercial Bank</p>
+      <p style="margin:0 0 .25rem; color:#64748b; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em;">Account Holder</p>
+      <p style="margin:0 0 1.1rem; font-weight:600; font-size:1.15rem; color:#f8fafc;">Huynh Huu Nhan</p>
+      <p style="margin:0 0 .4rem; color:#64748b; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em;">Account Number</p>
+      <div class="code-block" style="margin:0;"><button class="copy-btn">Copy</button><pre><code>999979798886</code></pre></div>
+    </div>
+  </div>
+</section>
+<footer class="site-footer">
+  <p>KJ CLIController is open-source software released under the MIT License. Built with ❤️ in Rust by KJ. Contributions welcome — <a href="https://github.com/clicontroller/clicontroller">star the repo</a> and join the community. Like it? <a href="#support">Buy me a coffee ☕</a>.</p>
+</footer>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var revealItems = document.querySelectorAll('.reveal');
+  if (revealItems.length && 'IntersectionObserver' in window) {
+    var revealObserver = new IntersectionObserver(function (entries, observer) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var el = entry.target;
+        el.classList.add('visible');
+        observer.unobserve(el);
+      });
+    }, { threshold: 0.15 });
+
+    Array.prototype.forEach.call(revealItems, function (el, index) {
+      el.style.transitionDelay = (index * 0.08) + 's';
+      revealObserver.observe(el);
+    });
+  } else {
+    Array.prototype.forEach.call(revealItems, function (el) {
+      el.classList.add('visible');
+    });
+  }
+
+  var navToggle = document.querySelector('button.nav-toggle');
+  var navLinks = document.querySelector('.nav-links');
+  if (navToggle && navLinks) {
+    navToggle.addEventListener('click', function () {
+      navLinks.classList.toggle('open');
+    });
+
+    navLinks.addEventListener('click', function (event) {
+      var link = event.target && event.target.closest ? event.target.closest('a') : null;
+      if (link) {
+        navLinks.classList.remove('open');
+      }
+    });
+  }
+
+  var copyButtons = document.querySelectorAll('.code-block .copy-btn');
+  Array.prototype.forEach.call(copyButtons, function (button) {
+    button.addEventListener('click', function () {
+      var codeBlock = button.closest('.code-block');
+      var codeEl = codeBlock ? codeBlock.querySelector('pre code') : null;
+      if (!codeEl) return;
+
+      var originalText = button.textContent;
+      var codeText = codeEl.textContent || '';
+
+      var done = function () {
+        button.textContent = 'Copied!';
+        window.setTimeout(function () {
+          button.textContent = originalText;
+        }, 1500);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(codeText).then(done).catch(function () {
+          done();
+        });
+      } else {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = codeText;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        } catch (e) {}
+        done();
+      }
+    });
+  });
+
+  var navAnchors = document.querySelectorAll('a[href^="#"]');
+  Array.prototype.forEach.call(navAnchors, function (anchor) {
+    anchor.addEventListener('click', function (event) {
+      var href = anchor.getAttribute('href');
+      if (!href || href === '#') return;
+
+      var target = document.querySelector(href);
+      if (!target) return;
+
+      event.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  var statNums = document.querySelectorAll('.stat-num[data-target]');
+  Array.prototype.forEach.call(statNums, function (el) {
+    var targetValue = parseFloat(el.getAttribute('data-target'));
+    if (isNaN(targetValue)) return;
+
+    var start = null;
+    var duration = 1500;
+    var isInteger = String(targetValue).indexOf('.') === -1;
+
+    function animate(timestamp) {
+      if (start === null) start = timestamp;
+      var progress = Math.min((timestamp - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var value = targetValue * eased;
+      el.textContent = isInteger ? Math.round(value).toString() : value.toFixed(1);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        el.textContent = isInteger ? Math.round(targetValue).toString() : targetValue.toFixed(1);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  });
+
+  var header = document.querySelector('header.site-header');
+  if (header) {
+    var updateHeader = function () {
+      header.classList.toggle('scrolled', window.scrollY > 40);
+    };
+    window.addEventListener('scroll', updateHeader, { passive: true });
+    updateHeader();
+  }
+});
+</script>
+</body>
+</html>

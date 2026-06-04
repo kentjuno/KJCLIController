@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KJ CLIController - API Usage Guide</title>
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --bg-sidebar: #0f1624;
+            --bg-card: rgba(30, 41, 59, 0.4);
+            --border-color: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --accent-cyan: #06b6d4;
+            --accent-cyan-hover: #0891b2;
+            --accent-green: #10b981;
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            width: 280px;
+            padding: 2rem;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+        }
+
+        .brand {
+            margin-bottom: 2.5rem;
+        }
+
+        .logo {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .menu-title {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-cyan);
+        }
+
+        /* ── Main Content Space ── */
+        .main-content {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 1000px;
+            width: calc(100% - 280px);
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 2rem;
+        }
+
+        h2 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            color: var(--accent-cyan);
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            font-size: 0.95rem;
+        }
+
+        /* ── Cards & Tables ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .badge-list {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .badge {
+            background-color: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            color: var(--accent-cyan);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+        }
+
+        .badge.green {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        /* ── Code Blocks ── */
+        .code-container {
+            position: relative;
+            margin: 1.5rem 0;
+        }
+
+        pre {
+            background-color: #05070c;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+        }
+
+        code {
+            color: #38bdf8;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            color: var(--text-primary);
+            background: var(--border-color);
+        }
+
+        /* Table formatting */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--text-primary);
+            font-weight: 600;
+            background-color: rgba(30, 41, 59, 0.2);
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        .method {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+
+        .url {
+            font-family: var(--font-mono);
+            color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── Sidebar Navigation ── -->
+    <div class="sidebar">
+        <div class="brand">
+            <span class="logo">KJ CLIController</span>
+        </div>
+        <div class="menu-title">API Guide</div>
+        <div class="nav-links">
+            <a href="#intro" class="nav-link">Introduction</a>
+            <a href="#endpoints" class="nav-link">Endpoints Overview</a>
+            <a href="#chat-completions" class="nav-link">Chat Completions</a>
+            <a href="#curl-example" class="nav-link">cURL Example</a>
+            <a href="#powershell-example" class="nav-link">PowerShell Example</a>
+            <a href="#python-example" class="nav-link">Python Script Example</a>
+            <a href="#file-attachments" class="nav-link">Uploading Attachments</a>
+            <a href="/" class="nav-link" style="margin-top: 1.5rem; color: var(--accent-green);">← Back to Chat UI</a>
+        </div>
+    </div>
+
+    <!-- ── Main Documentation Area ── -->
+    <div class="main-content">
+        <h1>KJ CLIController API Guide</h1>
+        <div class="subtitle">Integration guide for the Local AI CLI Gateway API</div>
+
+        <!-- ── Section: Intro ── -->
+        <section id="intro">
+            <h2>Overview</h2>
+            <p>
+                <strong>CLIController</strong> provides a gateway API that is fully compatible with the OpenAI format. When you call this API, the system automatically spawns a subprocess that drives the local CLIs running on the host machine and returns results quickly.
+            </p>
+            <div class="card">
+                <h3>Supported Models / CLIs:</h3>
+                <p>You can set the <code>"model"</code> field in the request body to one of the following values:</p>
+                <div class="badge-list">
+                    <span class="badge">claude</span>
+                    <span class="badge green">gemini</span>
+                    <span class="badge">openai</span>
+                </div>
+                <p style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                    * Note: "openai" activates the local Codex CLI on your device.
+                </p>
+            </div>
+        </section>
+
+        <!-- ── Section: Endpoints ── -->
+        <section id="endpoints">
+            <h2>Available Endpoints</h2>
+            <p>All routes except this documentation page require a token authentication header.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint URL</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="method">POST</td>
+                        <td class="url">/v1/chat/completions</td>
+                        <td>Send prompts and receive text responses from the corresponding CLI</td>
+                    </tr>
+                    <tr>
+                        <td class="method">GET</td>
+                        <td class="url">/api/providers</td>
+                        <td>List the local CLIs and their availability status</td>
+                    </tr>
+                    <tr>
+                        <td class="method">POST</td>
+                        <td class="url">/api/upload</td>
+                        <td>Upload attachment files (images, text) to the temporary directory</td>
+                    </tr>
+                    <tr>
+                        <td class="method">GET</td>
+                        <td class="url">/api/guide</td>
+                        <td>View this API integration guide page</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ── Section: Chat Completions ── -->
+        <section id="chat-completions">
+            <h2>Sending a Chat Completion</h2>
+            <p>
+                Main endpoint: <code class="url">POST /v1/chat/completions</code>. Two required headers:
+            </p>
+            <pre><code>Authorization: Bearer my-secret-lan-token
+Content-Type: application/json</code></pre>
+            <p>The JSON payload structure includes:</p>
+            <ul>
+                <li><strong>model</strong>: The model to call (<code>"claude"</code> | <code>"gemini"</code> | <code>"openai"</code>)</li>
+                <li><strong>messages</strong>: An array of conversation messages, each with <code>role</code> and <code>content</code></li>
+                <li><strong>timeout</strong>: CLI command execution timeout (default: 90 seconds)</li>
+                <li><strong>cwd</strong>: (Optional) The absolute working directory path on the host where the CLI subprocess should execute. If not provided, it will automatically default to the parent directory of the first file attachment.</li>
+            </ul>
+        </section>
+
+        <!-- ── Section: cURL Example ── -->
+        <section id="curl-example">
+            <h2>cURL Example</h2>
+            <p>You can run the following cURL command from your terminal to test a response from the Claude CLI:</p>
+            
+            <div class="code-container">
+                <button class="copy-btn" onclick="copyCode('curl-code')">Copy</button>
+                <pre><code id="curl-code">curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Authorization: Bearer my-secret-lan-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Say hello in Rust"
+      }
+    ]
+  }'</code></pre>
+            </div>
+        </section>
+
+        <!-- ── Section: PowerShell Example ── -->
+        <section id="powershell-example">
+            <h2>PowerShell Example</h2>
+            <p>You can run this query using PowerShell's native <code>Invoke-RestMethod</code> cmdlet:</p>
+            
+            <div class="code-container">
+                <button class="copy-btn" onclick="copyCode('powershell-code')">Copy</button>
+                <pre><code id="powershell-code">$headers = @{
+    "Authorization" = "Bearer my-secret-lan-token"
+    "Content-Type" = "application/json"
+}
+
+$body = @{
+    model = "claude"
+    messages = @(
+        @{ role = "user"; content = "Say hello in Rust" }
+    )
+    timeout = 120
+    cwd = "F:\AntiGravity\testgame" # (Optional) Workspace path
+} | ConvertTo-Json -Depth 8 -Compress
+
+$response = Invoke-RestMethod -Uri "http://localhost:8080/v1/chat/completions" -Method Post -Headers $headers -Body $body
+$response.choices[0].message.content</code></pre>
+            </div>
+        </section>
+
+        <!-- ── Section: Python Example ── -->
+        <section id="python-example">
+            <h2>Python Integration Example</h2>
+            <p>Use Python <code>requests</code> to quickly embed this capability into the AI services of other projects:</p>
+
+            <div class="code-container">
+                <button class="copy-btn" onclick="copyCode('python-code')">Copy</button>
+                <pre><code id="python-code">import base64
+import requests
+
+def ask_local_cli(model, prompt, system_prompt=None, image_path=None, cwd=None):
+    url = "http://localhost:8080/v1/chat/completions"
+    headers = {
+        "Authorization": "Bearer my-secret-lan-token",
+        "Content-Type": "application/json"
+    }
+    
+    # Assemble the prompt and handle base64 image if present
+    user_content = [{"type": "text", "text": prompt}]
+    
+    if image_path:
+        with open(image_path, "rb") as img_file:
+            b64_str = base64.b64encode(img_file.read()).decode("utf-8")
+        ext = image_path.split(".")[-1].lower()
+        mime = f"image/{ext}" if ext in ["png", "jpg", "jpeg", "webp", "gif"] else "image/jpeg"
+        
+        user_content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:{mime};base64,{b64_str}"}
+        })
+        
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_content})
+    
+    payload = {
+        "model": model,
+        "messages": messages,
+        "timeout": 120
+    }
+    if cwd:
+        payload["cwd"] = cwd
+    
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
+
+# Usage:
+# text = ask_local_cli("claude", "Write a bubble sort algorithm")
+# print(text)</code></pre>
+            </div>
+        </section>
+
+        <!-- ── Section: Attachments ── -->
+        <section id="file-attachments">
+            <h2>Sending File Attachments</h2>
+            <p>
+                To attach large non-image text documents (such as <code>.txt</code>, <code>.py</code>, <code>.csv</code>), the simplest approach is to read the file contents in your own script and insert that text directly into the prompt you send:
+            </p>
+            <pre><code>Please analyze the structure of this config file:
+
+[Attached file: config.json]
+{
+  "port": 8080,
+  "token": "my-secret-lan-token"
+}</code></pre>
+        </section>
+    </div>
+
+    <!-- Copy action helper -->
+    <script>
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = document.querySelector(`[onclick="copyCode('${elementId}')"]`);
+                const originalText = btn.innerText;
+                btn.innerText = "Copied!";
+                btn.style.color = "var(--accent-green)";
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.color = "var(--text-secondary)";
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

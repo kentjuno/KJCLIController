@@ -1,0 +1,7 @@
+{
+  "token": "change-me-to-a-strong-secret",
+  "port": 8080,
+  "temp_dir": "./temp_uploads",
+  "output_dir": "./outputs",
+  "openai_api_key": null
+}

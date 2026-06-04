@@ -1,0 +1,21 @@
+# Rust build artifacts
+/target
+
+# Local runtime config (contains your LAN token / API key) — use config.example.json as a template
+/config.json
+
+# Runtime directories
+/temp_uploads/
+/outputs/
+/cache/
+/.claude/
+
+
+# Scratch / test artifacts
+/test_in.txt
+/test_out.txt
+*.tmp
+
+# Editor / OS
+.DS_Store
+Thumbs.db

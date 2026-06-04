@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KJ CLIController - Local AI CLI Gateway</title>
+    <link rel="stylesheet" href="/static/style.css?v=3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Settings -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-text">KJ CLIController</div>
+                <div class="status-indicator">
+                    <span class="pulse-dot"></span>
+                    <span class="status-label">Online</span>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h3>AI Provider Configuration</h3>
+                
+                <div class="input-group">
+                    <label for="provider-select">Model / CLI Provider</label>
+                    <select id="provider-select">
+                        <option value="gemini" selected>Gemini / Antigravity CLI</option>
+                        <option value="claude">Claude Code (recommended)</option>
+                        <option value="openai">OpenAI Codex CLI / API</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="auth-token">Bearer Authentication Token</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="auth-token" placeholder="Enter LAN Token..." value="my-secret-lan-token">
+                        <button type="button" id="toggle-token-visibility" class="btn-icon">👁️</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="system-prompt">System Prompt / Role</label>
+                    <textarea id="system-prompt" rows="6" placeholder="Configure default system instructions..."></textarea>
+                </div>
+            </div>
+
+            <div class="status-section">
+                <h3>Host CLI Environment</h3>
+                <div id="providers-list" class="provider-status-list">
+                    <div class="loading-status">Checking host environment...</div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>KJ CLIController Gateway v0.1.0</p>
+                <p style="margin-top:.4rem; font-size:.78rem; color:#64748b;">☕ Donate: MB Bank · Huynh Huu Nhan · 999979798886</p>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-container">
+            <header class="chat-header">
+                <div class="chat-title-info">
+                    <h2 id="active-model-title">Gemini / Antigravity CLI</h2>
+                    <p id="active-model-desc">Google Ultra plan model proxying via local Agy binary</p>
+                </div>
+                <div class="server-endpoint">
+                    <span class="endpoint-badge">LAN API</span>
+                    <span id="endpoint-url">http://localhost:8080/v1</span>
+                </div>
+            </header>
+
+            <!-- Chat Message History -->
+            <div id="chat-history" class="chat-history">
+                <div class="message system-msg">
+                    <div class="msg-content">
+                        <strong>System initialized successfully.</strong> You can start chatting with your local AI CLIs through the LAN gateway. Every prompt is routed directly to the corresponding CLI on the host machine.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Previews -->
+            <div id="upload-preview-container" class="upload-preview-container hidden">
+                <!-- Preview chips will be rendered here dynamically -->
+            </div>
+
+            <!-- Chat Form Input -->
+            <div class="chat-input-area">
+                <div id="mention-suggestions" class="mention-suggestions hidden"></div>
+                <form id="chat-form" class="chat-form">
+                    <label for="file-upload" class="btn-upload" title="Attach file or image">
+                        <input type="file" id="file-upload" accept="image/*,.txt,.log,.json" multiple>
+                        <span class="upload-icon">📎</span>
+                    </label>
+                    
+                    <textarea id="chat-input" placeholder="Type a message or press Shift + Enter for new line..." rows="1"></textarea>
+                    
+                    <button type="submit" id="btn-send" class="btn-send">
+                        <span class="send-text">Send</span>
+                        <div class="send-spinner hidden"></div>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+    <script src="/static/app.js?v=3"></script>
+</body>
+</html>
