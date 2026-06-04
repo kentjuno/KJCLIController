@@ -1,0 +1,99 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build - ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      matrix:
+        platform:
+          - name: linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bin_name: clicontroller
+            output_name: clicontroller-linux-x86_64
+          - name: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin_name: clicontroller.exe
+            output_name: clicontroller-windows-x86_64.exe
+          - name: macos-universal
+            os: macos-latest
+            target: universal
+            bin_name: clicontroller
+            output_name: clicontroller-macos-universal
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target != 'universal' && matrix.platform.target || 'aarch64-apple-darwin x86_64-apple-darwin' }}
+
+      - name: Build binary (Standard)
+        if: matrix.platform.target != 'universal'
+        run: cargo build --release --target ${{ matrix.platform.target }} --bin clicontroller
+
+      - name: Build binary (macOS Universal)
+        if: matrix.platform.target == 'universal'
+        run: |
+          cargo build --release --target aarch64-apple-darwin --bin clicontroller
+          cargo build --release --target x86_64-apple-darwin --bin clicontroller
+          mkdir -p target/release
+          lipo -create \
+            target/aarch64-apple-darwin/release/clicontroller \
+            target/x86_64-apple-darwin/release/clicontroller \
+            -output target/release/clicontroller-universal
+
+      - name: Prepare Assets
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ matrix.platform.target }}" = "universal" ]; then
+            cp target/release/clicontroller-universal dist/${{ matrix.platform.output_name }}
+          else
+            cp target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin_name }} dist/${{ matrix.platform.output_name }}
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.output_name }}
+          path: dist/${{ matrix.platform.output_name }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Restructure artifacts
+        run: |
+          mkdir -p release_files
+          find artifacts -type f -exec cp {} release_files/ \;
+          ls -la release_files
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_files/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
