@@ -265,6 +265,40 @@ def call_cli_gateway(
 
 ---
 
+## Claude Code Skill: "Consult the CLIs"
+
+This repo ships a [Claude Code](https://docs.claude.com/en/docs/claude-code) **Skill** that turns the gateway into a one-phrase command. Once installed, you can just tell your Claude Code agent *"consult the other CLIs"* (or in Vietnamese, *"tham vấn mấy ông CLI"*) and it will automatically forward your question to the local `claude`, `gemini`, and `openai` (Codex) CLIs through the gateway and synthesize the answers.
+
+It lives in [`skills/consult-local-clis/`](skills/consult-local-clis/) and is built around a dependency-free Python client ([`scripts/consult.py`](skills/consult-local-clis/scripts/consult.py)) that handles two common pitfalls automatically: Windows shell quote-mangling on inline `curl`, and the Codex CLI rejecting a system role.
+
+### Install
+
+**Option A — drop-in folder** (works on any OS):
+```bash
+# Copy the skill into your personal Claude Code skills directory
+cp -r skills/consult-local-clis ~/.claude/skills/
+```
+On Windows that target is `%USERPROFILE%\.claude\skills\`.
+
+**Option B — packaged bundle:** install [`skills/consult-local-clis.skill`](skills/consult-local-clis.skill) via your Claude Code skill installer.
+
+### Use
+
+With the gateway running on `http://localhost:8080`, start a Claude Code session and say things like:
+- "tham vấn mấy ông CLI xem nên chọn Postgres hay SQLite cho dự án này"
+- "get a second opinion from Codex on this function"
+- "ask gemini and claude to review this architecture"
+
+You can also call the client directly:
+```bash
+python skills/consult-local-clis/scripts/consult.py --all --prompt "What is a mutex?"
+python skills/consult-local-clis/scripts/consult.py --model openai --prompt "Refactor this" --timeout 240
+python skills/consult-local-clis/scripts/consult.py --providers   # check which CLIs are up
+```
+Override the gateway location/token with `--base-url` / `--token` or the env vars `CLI_CONTROLLER_URL` / `CLI_CONTROLLER_TOKEN`.
+
+---
+
 ## ☕ Support / Donate
 
 **KJ CLIController** is built and maintained by **KJ** as free, open-source software. If this project saves you time or you'd like to support continued development, a small donation is hugely appreciated — thank you! 🙏
