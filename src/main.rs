@@ -141,6 +141,7 @@ async fn main() {
         .nest_service("/outputs", ServeDir::new(&config.output_dir))
         // Serve frontend home
         .route("/", get(serve_index))
+        .route("/chat", get(serve_chat))
         .route("/api/guide", get(handle_guide))
         .layer(cors)
         .layer(DefaultBodyLimit::max(20 * 1024 * 1024)); // 20 MB limit for file uploads
@@ -173,15 +174,25 @@ async fn serve_static(axum::extract::Path(path): axum::extract::Path<String>) ->
     }
 }
 
+// Homepage: serve the marketing landing page.
 async fn serve_index() -> impl axum::response::IntoResponse {
-    match Asset::get("index.html") {
+    serve_embedded_html("landing.html")
+}
+
+// Chat dashboard moved to /chat so the landing page can own "/".
+async fn serve_chat() -> impl axum::response::IntoResponse {
+    serve_embedded_html("index.html")
+}
+
+fn serve_embedded_html(name: &str) -> axum::response::Response {
+    match Asset::get(name) {
         Some(content) => axum::response::Response::builder()
             .header("content-type", "text/html; charset=utf-8")
             .body(axum::body::Body::from(content.data.into_owned()))
             .unwrap(),
         None => axum::response::Response::builder()
             .status(StatusCode::NOT_FOUND)
-            .body(axum::body::Body::from("index.html not found"))
+            .body(axum::body::Body::from(format!("{name} not found")))
             .unwrap(),
     }
 }
