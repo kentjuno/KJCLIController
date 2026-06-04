@@ -602,6 +602,7 @@ a {
       <a href="#providers">Providers</a>
       <a href="#quickstart">Quickstart</a>
       <a href="#api">API</a>
+      <a href="#skill">Skill</a>
       <a href="#support">Support</a>
     </div>
   </nav>
@@ -1027,6 +1028,44 @@ curl http://localhost:8080/v1/chat/completions \
       </tr>
     </tbody>
   </table>
+</section>
+
+<section id="skill" class="features">
+  <h2 class="section-title reveal">Claude Code Skill</h2>
+  <p class="section-sub reveal" style="max-width:680px; margin:0 auto 1rem;">Install the bundled <strong>“Consult the CLIs”</strong> skill and just tell your Claude Code agent <em>“tham vấn mấy ông CLI”</em> (or <em>“consult the other models”</em>) — it routes your question to the local Claude, Gemini, and Codex CLIs and synthesizes their answers for you.</p>
+
+  <div class="feature-grid reveal" style="margin-top:2.5rem;">
+    <div class="feature-card">
+      <div class="feature-icon">🗣️</div>
+      <h3>One phrase, three minds</h3>
+      <p>Name one model or ask the whole panel. The agent picks the best CLI for the task — or queries all three in parallel and reconciles consensus vs. disagreement.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧩</div>
+      <h3>Zero-dependency client</h3>
+      <p>A single stdlib-only Python script does the dispatching — no pip installs, works the same on Windows, macOS, and Linux.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <h3>Pitfalls handled</h3>
+      <p>Auto-fixes Windows shell quote-mangling on inline <code>curl</code> and folds system prompts for the Codex CLI, which rejects the <code>--system</code> flag.</p>
+    </div>
+  </div>
+
+  <div class="code-block reveal" style="margin-top:2.5rem;">
+    <button class="copy-btn">Copy</button>
+    <pre><code># Install into your Claude Code skills directory
+cp -r skills/consult-local-clis ~/.claude/skills/
+
+# …then in a Claude Code session, just say:
+#   "tham vấn mấy ông CLI xem nên chọn Postgres hay SQLite"
+#   "get a second opinion from Codex on this function"
+
+# Or call the client directly:
+python skills/consult-local-clis/scripts/consult.py --all --prompt "What is a mutex?"</code></pre>
+  </div>
+
+  <p class="section-sub reveal" style="max-width:680px; margin:1.75rem auto 0; font-size:0.95rem;">Ships in the repo under <code>skills/</code> — grab the folder or the packaged <code>.skill</code> bundle. See the README for full usage.</p>
 </section>
 
 <section id="support" class="support" style="padding:5rem 1.5rem; text-align:center;">
