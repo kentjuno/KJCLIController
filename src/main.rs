@@ -1,3 +1,7 @@
+// Hide the console window in release builds on Windows; the app lives in the
+// system tray instead. Debug builds keep the console so logs are visible during dev.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 use axum::{
     extract::{DefaultBodyLimit, Multipart},
     http::StatusCode,
@@ -13,8 +17,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
-use tracing::{error, info, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing::{error, info};
 use uuid::Uuid;
 use base64::Engine;
 use rust_embed::RustEmbed;
@@ -28,6 +31,10 @@ mod auth;
 mod cli;
 mod config;
 mod registry;
+
+// System tray runs only in Windows release builds (see Cargo.toml target deps).
+#[cfg(all(windows, not(debug_assertions)))]
+mod tray;
 
 use auth::auth_middleware;
 use config::AppConfig;
@@ -86,41 +93,37 @@ struct AppState {
     config: AppConfig,
 }
 
-#[tokio::main]
-async fn main() {
-    // 1. Initialize logging
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+/// Absolute path to the log file, used both by the logger and the tray "View Logs" action.
+fn log_file_path() -> PathBuf {
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("logs")
+        .join("clicontroller.log")
+}
 
-    for file in Asset::iter() {
-        info!("Embedded file: {}", file);
-    }
+/// Initialize logging to both stdout and `logs/clicontroller.log`.
+/// Returns the appender guard, which must be kept alive for the program's lifetime.
+fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
+    use tracing_subscriber::filter::LevelFilter;
+    use tracing_subscriber::fmt;
+    use tracing_subscriber::prelude::*;
 
+    let _ = fs::create_dir_all("logs");
+    // A single fixed file (no date suffix) keeps the "View Logs" path predictable.
+    let file_appender = tracing_appender::rolling::never("logs", "clicontroller.log");
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
 
-    // 2. Load Config
-    let config = AppConfig::load();
-    
-    // Set OpenAI API key if configured
-    if let Some(key) = &config.openai_api_key {
-        if !key.is_empty() {
-            info!("Setting OPENAI_API_KEY from configuration");
-            std::env::set_var("OPENAI_API_KEY", key);
-        }
-    }
+    tracing_subscriber::registry()
+        .with(LevelFilter::INFO)
+        .with(fmt::layer().with_writer(std::io::stdout))
+        .with(fmt::layer().with_ansi(false).with_writer(file_writer))
+        .init();
 
-    info!("Starting KJ CLIController on port {}", config.port);
+    guard
+}
 
-    let state = Arc::new(AppState { config: config.clone() });
-
-    // 3. Setup static files folder and uploads directory
-    let _ = fs::create_dir_all(&config.temp_dir);
-    let _ = fs::create_dir_all(&config.output_dir);
-    
-
-
-    // Setup routes
+/// Build the full Axum router (API + static + frontend routes).
+fn build_router(state: Arc<AppState>, config: &AppConfig) -> Router {
     let cors = CorsLayer::permissive();
 
     // API routes requiring Bearer Token Auth
@@ -135,7 +138,7 @@ async fn main() {
         .with_state(state.clone());
 
     // Public / static routes
-    let app = Router::new()
+    Router::new()
         .merge(api_routes)
         .route("/static/*path", get(serve_static))
         .nest_service("/outputs", ServeDir::new(&config.output_dir))
@@ -144,13 +147,73 @@ async fn main() {
         .route("/chat", get(serve_chat))
         .route("/api/guide", get(handle_guide))
         .layer(cors)
-        .layer(DefaultBodyLimit::max(20 * 1024 * 1024)); // 20 MB limit for file uploads
+        .layer(DefaultBodyLimit::max(20 * 1024 * 1024)) // 20 MB limit for file uploads
+}
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port))
-        .await
-        .unwrap();
-    info!("Server listening on http://0.0.0.0:{}", config.port);
-    axum::serve(listener, app).await.unwrap();
+/// Bind and serve the application. Runs forever.
+async fn serve(app: Router, port: u16) {
+    match tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await {
+        Ok(listener) => {
+            info!("Server listening on http://0.0.0.0:{port}");
+            if let Err(e) = axum::serve(listener, app).await {
+                error!("Server error: {e}");
+            }
+        }
+        Err(e) => {
+            error!("Failed to bind port {port} (is it already in use?): {e}");
+        }
+    }
+}
+
+fn main() {
+    // Keep the logging guard alive for the whole process.
+    let _log_guard = init_logging();
+
+    for file in Asset::iter() {
+        info!("Embedded file: {}", file);
+    }
+
+    // Load config
+    let config = AppConfig::load();
+
+    // Set OpenAI API key if configured
+    if let Some(key) = &config.openai_api_key {
+        if !key.is_empty() {
+            info!("Setting OPENAI_API_KEY from configuration");
+            std::env::set_var("OPENAI_API_KEY", key);
+        }
+    }
+
+    info!("Starting KJ CLIController on port {}", config.port);
+
+    let _ = fs::create_dir_all(&config.temp_dir);
+    let _ = fs::create_dir_all(&config.output_dir);
+
+    let state = Arc::new(AppState { config: config.clone() });
+    let app = build_router(state, &config);
+    let port = config.port;
+
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("failed to build Tokio runtime");
+
+    // Windows release: run the server on a background thread and the system-tray
+    // event loop on the main thread (the tray/event loop must own the main thread).
+    #[cfg(all(windows, not(debug_assertions)))]
+    {
+        std::thread::spawn(move || {
+            rt.block_on(serve(app, port));
+        });
+        tray::run_tray(port, log_file_path());
+    }
+
+    // Everywhere else (Linux/macOS, or Windows debug builds): just run the server.
+    #[cfg(not(all(windows, not(debug_assertions))))]
+    {
+        let _ = log_file_path; // silence unused-fn warning on these targets
+        rt.block_on(serve(app, port));
+    }
 }
 
 async fn serve_static(axum::extract::Path(path): axum::extract::Path<String>) -> impl axum::response::IntoResponse {
