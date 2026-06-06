@@ -146,6 +146,9 @@ fn build_router(state: Arc<AppState>, config: &AppConfig) -> Router {
         .route("/", get(serve_index))
         .route("/chat", get(serve_chat))
         .route("/api/guide", get(handle_guide))
+        // Agent-readable orchestration protocol (markdown) + downloadable helper
+        .route("/agents", get(serve_agents))
+        .route("/consult.py", get(serve_consult_py))
         .layer(cors)
         .layer(DefaultBodyLimit::max(20 * 1024 * 1024)) // 20 MB limit for file uploads
 }
@@ -258,6 +261,32 @@ fn serve_embedded_html(name: &str) -> axum::response::Response {
             .body(axum::body::Body::from(format!("{name} not found")))
             .unwrap(),
     }
+}
+
+// The orchestration helper script, embedded at compile time so the gateway can serve it
+// for download on any machine: `curl -O http://localhost:8080/consult.py`.
+const CONSULT_PY: &str = include_str!("../skills/consult-local-clis/scripts/consult.py");
+
+// Agent-readable orchestration protocol (raw markdown). Served at /agents — a short,
+// memorable URL to hand to a desktop agent ("read localhost:8080/agents and apply it").
+async fn serve_agents() -> impl axum::response::IntoResponse {
+    match Asset::get("agents.md") {
+        Some(content) => axum::response::Response::builder()
+            .header("content-type", "text/plain; charset=utf-8")
+            .body(axum::body::Body::from(content.data.into_owned()))
+            .unwrap(),
+        None => axum::response::Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(axum::body::Body::from("agents.md not found"))
+            .unwrap(),
+    }
+}
+
+async fn serve_consult_py() -> impl axum::response::IntoResponse {
+    axum::response::Response::builder()
+        .header("content-type", "text/x-python; charset=utf-8")
+        .body(axum::body::Body::from(CONSULT_PY))
+        .unwrap()
 }
 
 async fn handle_guide() -> impl axum::response::IntoResponse {

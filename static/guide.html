@@ -522,6 +522,17 @@ absolute paths. If a provider is unavailable, skip it and continue.
 Full protocol: read ORCHESTRATION.md in the working directory.</code></pre>
             </div>
 
+            <div class="card" style="border-color: rgba(16,185,129,0.3);">
+                <h3>💡 Fastest start: hand an agent the <code>/agents</code> link</h3>
+                <p style="margin-bottom: 0;">
+                    A machine-readable (markdown) version of this protocol is served at
+                    <code class="url">http://localhost:8080/agents</code>. Just tell any desktop agent:
+                    <em>"Read http://localhost:8080/agents and apply it to this project."</em>
+                    The agent can also download the helper directly with
+                    <code>curl -O http://localhost:8080/consult.py</code> — no files need to exist in the project beforehand.
+                </p>
+            </div>
+
             <p style="font-size: 0.85rem; color: var(--text-muted);">
                 * Portability: always use paths <strong>relative to the workspace</strong>, and never assume a CLI is installed — check <code class="url">/api/providers</code> and degrade gracefully. See <code>ORCHESTRATION.md</code> for the full protocol.
             </p>
