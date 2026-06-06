@@ -44,10 +44,21 @@ python scripts/consult.py --all --prompt "<the question>"
 
 # With a system instruction and a longer timeout for heavy tasks
 python scripts/consult.py --model openai --prompt "<task>" --system "Be concise" --timeout 240
+
+# Orchestration mode: run the worker INSIDE a shared workspace and auto-apply the
+# AGENT_LOG.md ledger protocol (worker reads it first, appends a summary when done)
+python scripts/consult.py --model codex --workspace . --prompt "Implement the parser"
 ```
 
 The script prints each reply under a `===== MODEL =====` header. Pass `--json` if you'd
 rather parse structured output. Exit code is non-zero if any provider errored.
+
+**Orchestration mode (`--workspace`)**: when you delegate a real *task* (not just a
+question), pass `--workspace <dir>`. The worker runs inside that directory (via the gateway's
+`cwd`) with file access, and the prompt is auto-wrapped so the worker reads `AGENT_LOG.md`
+for prior context first and appends a dated summary (plus a `STATUS / FILES_CHANGED / NEXT`
+footer) when done. This is the shared cross-step memory — see
+`orchestration/ORCHESTRATION.md` in the gateway repo for the full protocol.
 
 Run it from the skill directory, or give the absolute path to `consult.py`. The gateway
 defaults to `http://localhost:8080` with token `my-secret-lan-token`; override with

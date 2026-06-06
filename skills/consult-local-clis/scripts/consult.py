@@ -13,9 +13,14 @@ Usage:
   python consult.py --model openai --prompt "Refactor this" --timeout 240
   python consult.py --providers          # list available CLIs and exit
 
+  # Orchestration mode: run the worker inside a shared workspace and have it
+  # read/append the AGENT_LOG.md ledger automatically (see ORCHESTRATION.md):
+  python consult.py --model codex --workspace . --prompt "Implement the parser module"
+
 Env / flags:
   --token        Bearer token (default: $CLI_CONTROLLER_TOKEN or "my-secret-lan-token")
   --base-url     gateway base (default: $CLI_CONTROLLER_URL or http://localhost:8080)
+  --workspace    run the worker in this dir (sets cwd) and auto-apply the ledger protocol
   --json         print the raw JSON envelope instead of just the text
 """
 import argparse
@@ -29,6 +34,27 @@ import urllib.error
 DEFAULT_BASE = os.environ.get("CLI_CONTROLLER_URL", "http://localhost:8080")
 DEFAULT_TOKEN = os.environ.get("CLI_CONTROLLER_TOKEN", "my-secret-lan-token")
 ALL_MODELS = ["claude", "gemini", "openai"]
+LEDGER_FILE = "AGENT_LOG.md"
+
+
+def wrap_with_ledger(prompt):
+    """Wrap a task prompt with the shared-ledger orchestration protocol.
+
+    The worker is told to read AGENT_LOG.md first (context from previous steps),
+    do the task, then append a dated summary and end with a parseable footer.
+    """
+    return (
+        "You are collaborating with other AI agents in a shared workspace "
+        "(your current working directory).\n"
+        f"FIRST, read {LEDGER_FILE} here (if it exists) for context from previous steps.\n\n"
+        f"YOUR TASK:\n{prompt}\n\n"
+        f"WHEN DONE: append a dated entry to {LEDGER_FILE} (create it if missing) summarizing "
+        "what you did, key decisions, and files changed. Use paths relative to the workspace. "
+        "End your reply with this footer:\n"
+        "STATUS: done | blocked | needs-info\n"
+        "FILES_CHANGED: <relative paths, or none>\n"
+        "NEXT: <suggested next step>"
+    )
 
 
 def _post(base_url, token, payload, timeout_http):
@@ -45,21 +71,31 @@ def _post(base_url, token, payload, timeout_http):
         return json.loads(resp.read().decode("utf-8"))
 
 
-def consult(model, prompt, system=None, timeout=120, base_url=DEFAULT_BASE, token=DEFAULT_TOKEN):
-    """Return (model, text, error). error is None on success."""
+def consult(model, prompt, system=None, timeout=120, base_url=DEFAULT_BASE,
+            token=DEFAULT_TOKEN, workspace=None):
+    """Return (model, text, error). error is None on success.
+
+    If `workspace` is given, the worker runs inside that directory (via the gateway's
+    `cwd` field) and the prompt is wrapped with the AGENT_LOG.md ledger protocol.
+    """
+    task = wrap_with_ledger(prompt) if workspace else prompt
+
     messages = []
     # The "openai"/Codex CLI rejects a system role (no --system flag on this build),
     # so fold any system instruction into the user message for that provider.
     if system and model != "openai":
         messages.append({"role": "system", "content": system})
-        user_text = prompt
+        user_text = task
     elif system:
-        user_text = f"[System instruction: {system}]\n\n{prompt}"
+        user_text = f"[System instruction: {system}]\n\n{task}"
     else:
-        user_text = prompt
+        user_text = task
     messages.append({"role": "user", "content": user_text})
 
     payload = {"model": model, "messages": messages, "timeout": timeout}
+    if workspace:
+        # Absolute path so the gateway can resolve and chdir into it reliably.
+        payload["cwd"] = os.path.abspath(workspace)
     try:
         # Give the HTTP read a little more headroom than the CLI's own timeout.
         data = _post(base_url, token, payload, timeout + 30)
@@ -90,6 +126,8 @@ def main():
     ap.add_argument("--timeout", type=int, default=120, help="CLI execution timeout in seconds")
     ap.add_argument("--token", default=DEFAULT_TOKEN)
     ap.add_argument("--base-url", default=DEFAULT_BASE)
+    ap.add_argument("--workspace", default=None,
+                    help="run the worker in this dir (sets cwd) + apply the AGENT_LOG.md ledger protocol")
     ap.add_argument("--providers", action="store_true", help="list available CLIs and exit")
     ap.add_argument("--json", action="store_true", help="print raw JSON results")
     args = ap.parse_args()
@@ -109,11 +147,13 @@ def main():
 
     results = []
     if len(targets) == 1:
-        results.append(consult(targets[0], args.prompt, args.system, args.timeout, args.base_url, args.token))
+        results.append(consult(targets[0], args.prompt, args.system, args.timeout,
+                               args.base_url, args.token, args.workspace))
     else:
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(targets)) as ex:
             futs = {
-                ex.submit(consult, m, args.prompt, args.system, args.timeout, args.base_url, args.token): m
+                ex.submit(consult, m, args.prompt, args.system, args.timeout,
+                          args.base_url, args.token, args.workspace): m
                 for m in targets
             }
             # Preserve a stable order (claude, gemini, openai) regardless of finish time.
