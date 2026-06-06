@@ -25,8 +25,8 @@ Or any OpenAI SDK with `base_url = http://localhost:8080/v1`.
 Optional helper (a small dependency-free Python CLI you can download from the gateway):
 ```
 curl -O http://localhost:8080/consult.py
-python consult.py --model claude --workspace . --prompt "..."   # one worker
-python consult.py --all --prompt "..."                          # ask all three
+python consult.py --model claude --workspace . --prompt "..."        # one worker
+python consult.py --models claude,openai --prompt "..."             # the two strongest workers
 ```
 
 ## 2. Keep shared context across steps (the important part)
@@ -51,11 +51,15 @@ The `consult.py --workspace .` helper applies this wrapping automatically.
 
 ## 3. Roles (suggested)
 
-- **gemini (Antigravity)** — main conductor / heavy lifting.
-- **claude (Claude Code)** — senior technical advisor; consult for hard design / review calls. Use sparingly.
-- **openai (Codex)** — broad context and overview; plan coherence and cross-checks.
+Usually **Gemini/Antigravity is the conductor you are already chatting in**, so you normally do
+NOT route to `gemini` through the gateway (and `agy` is the slowest backend). Focus your
+delegation on the two strongest, most quota-efficient workers:
 
-Do not delegate to yourself — delegate to the OTHER two.
+- **claude (Claude Code)** — senior technical advisor; hard design, architecture, and review calls.
+- **openai (Codex)** — broad context and overview; implementation, plan coherence, cross-checks.
+
+`gemini` stays available as a fallback third opinion, but prefer **Claude + Codex**.
+Do not delegate to yourself.
 
 ## 4. Portability rules (you may be on any machine)
 

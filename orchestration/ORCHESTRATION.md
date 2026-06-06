@@ -55,10 +55,15 @@ NEXT: <suggested next step>
 
 ## 4. Roles (tune to your own quota)
 
-- **gemini (Antigravity)** — main conductor / heavy lifting (typically the most quota).
-- **claude (Claude Code)** — senior technical advisor; consult for hard design,
-  architecture, and review calls. **Use sparingly** (premium, scarcer quota).
-- **codex (OpenAI)** — broad context and overview; great for plan coherence and cross-checks.
+Usually **Gemini/Antigravity is the conductor you are already chatting in**, so you normally
+do not route to `gemini` through the gateway (and `agy` is the slowest backend). Concentrate
+delegation on the two strongest, most quota-efficient workers — call them directly or with
+`consult.py --models claude,openai`:
+
+- **claude (Claude Code)** — senior technical advisor; hard design, architecture, and review calls.
+- **openai (Codex)** — broad context and overview; implementation, plan coherence, cross-checks.
+
+`gemini` stays available as a fallback third opinion, but prefer **Claude + Codex**.
 
 ## 5. Portability rules (critical when this runs on other machines)
 

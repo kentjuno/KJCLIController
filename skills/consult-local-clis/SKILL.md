@@ -74,7 +74,10 @@ Read the user's phrasing and pick the narrowest interpretation that fits:
    **`openai` = OpenAI Codex** (so "codex"/"openai"/"GPT" all map to `--model openai`).
 
 2. **User said "mấy ông CLI" / "cả ba" / "all the models" / "the panel"** → use `--all`
-   and then synthesize (see below).
+   and then synthesize (see below). For *delegated work* (not just a poll of opinions),
+   prefer the two strongest, most quota-efficient workers with
+   `--models claude,openai` — `gemini`/`agy` is the slowest backend, so reserve it for a
+   fallback third opinion.
 
 3. **Ambiguous "tham vấn" with no target** → this is the default: pick the single CLI best
    suited to the task rather than spamming all three. Rough guide:

@@ -17,6 +17,9 @@ Usage:
   # read/append the AGENT_LOG.md ledger automatically (see ORCHESTRATION.md):
   python consult.py --model codex --workspace . --prompt "Implement the parser module"
 
+  # Ask a chosen subset (the two strongest, quota-efficient workers):
+  python consult.py --models claude,openai --prompt "Review this approach"
+
 Env / flags:
   --token        Bearer token (default: $CLI_CONTROLLER_TOKEN or "my-secret-lan-token")
   --base-url     gateway base (default: $CLI_CONTROLLER_URL or http://localhost:8080)
@@ -121,6 +124,8 @@ def main():
     ap = argparse.ArgumentParser(description="Consult local AI CLIs via the CLIController gateway.")
     ap.add_argument("--model", choices=ALL_MODELS, help="single provider to consult")
     ap.add_argument("--all", action="store_true", help="consult claude, gemini and openai in parallel")
+    ap.add_argument("--models", default=None,
+                    help="comma-separated subset, e.g. 'claude,openai' (overrides --model/--all)")
     ap.add_argument("--prompt", help="the question / task to send")
     ap.add_argument("--system", default=None, help="optional system instruction")
     ap.add_argument("--timeout", type=int, default=120, help="CLI execution timeout in seconds")
@@ -143,7 +148,15 @@ def main():
     if not args.prompt:
         ap.error("--prompt is required unless using --providers")
 
-    targets = ALL_MODELS if args.all else [args.model or "claude"]
+    if args.models:
+        targets = [m.strip() for m in args.models.split(",") if m.strip()]
+        unknown = [m for m in targets if m not in ALL_MODELS]
+        if unknown:
+            ap.error(f"unknown model(s): {', '.join(unknown)} (valid: {', '.join(ALL_MODELS)})")
+    elif args.all:
+        targets = ALL_MODELS
+    else:
+        targets = [args.model or "claude"]
 
     results = []
     if len(targets) == 1:
