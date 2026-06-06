@@ -24,6 +24,7 @@ Env / flags:
   --token        Bearer token (default: $CLI_CONTROLLER_TOKEN or "my-secret-lan-token")
   --base-url     gateway base (default: $CLI_CONTROLLER_URL or http://localhost:8080)
   --workspace    run the worker in this dir (sets cwd) and auto-apply the ledger protocol
+  --retries      retries on transient failure (empty reply / 5xx / network); default 2
   --json         print the raw JSON envelope instead of just the text
 """
 import argparse
@@ -31,6 +32,7 @@ import concurrent.futures
 import json
 import os
 import sys
+import time
 import urllib.request
 import urllib.error
 
@@ -38,6 +40,10 @@ DEFAULT_BASE = os.environ.get("CLI_CONTROLLER_URL", "http://localhost:8080")
 DEFAULT_TOKEN = os.environ.get("CLI_CONTROLLER_TOKEN", "my-secret-lan-token")
 ALL_MODELS = ["claude", "gemini", "openai"]
 LEDGER_FILE = "AGENT_LOG.md"
+
+# Substrings that mean a failure will NOT be fixed by retrying (don't waste attempts).
+NON_RETRYABLE = ("quota", "rate limit", "usage limit", "credits", "insufficient_quota",
+                 "upgrade to pro", "invalid api key", "incorrect api key")
 
 
 def wrap_with_ledger(prompt):
@@ -74,12 +80,24 @@ def _post(base_url, token, payload, timeout_http):
         return json.loads(resp.read().decode("utf-8"))
 
 
+def _is_retryable(err_text):
+    """Transient failures worth retrying; quota/auth errors are not."""
+    low = err_text.lower()
+    if any(k in low for k in NON_RETRYABLE):
+        return False
+    return True
+
+
 def consult(model, prompt, system=None, timeout=120, base_url=DEFAULT_BASE,
-            token=DEFAULT_TOKEN, workspace=None):
+            token=DEFAULT_TOKEN, workspace=None, retries=2, retry_delay=2.0):
     """Return (model, text, error). error is None on success.
 
     If `workspace` is given, the worker runs inside that directory (via the gateway's
     `cwd` field) and the prompt is wrapped with the AGENT_LOG.md ledger protocol.
+
+    Transient failures — an empty reply (a known `agy`/Gemini quirk), HTTP 5xx, or a
+    network/transport error — are retried up to `retries` times with linear backoff.
+    Client errors (HTTP 4xx) and quota/auth failures are returned immediately.
     """
     task = wrap_with_ledger(prompt) if workspace else prompt
 
@@ -99,16 +117,32 @@ def consult(model, prompt, system=None, timeout=120, base_url=DEFAULT_BASE,
     if workspace:
         # Absolute path so the gateway can resolve and chdir into it reliably.
         payload["cwd"] = os.path.abspath(workspace)
-    try:
-        # Give the HTTP read a little more headroom than the CLI's own timeout.
-        data = _post(base_url, token, payload, timeout + 30)
-        text = data["choices"][0]["message"]["content"]
-        return (model, text, None)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", "replace")
-        return (model, None, f"HTTP {e.code}: {body}")
-    except Exception as e:  # noqa: BLE001 - surface any transport/parse error verbatim
-        return (model, None, f"{type(e).__name__}: {e}")
+
+    last_err = None
+    for attempt in range(1, retries + 2):  # 1 initial try + `retries` retries
+        retryable = True
+        try:
+            # Give the HTTP read a little more headroom than the CLI's own timeout.
+            data = _post(base_url, token, payload, timeout + 30)
+            text = data.get("choices", [{}])[0].get("message", {}).get("content")
+            if text and text.strip():
+                return (model, text, None)
+            last_err = "empty response from provider"
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")
+            last_err = f"HTTP {e.code}: {body}"
+            # 4xx = client error (bad request/auth) -> never retry.
+            retryable = e.code >= 500 and _is_retryable(body)
+        except Exception as e:  # noqa: BLE001 - transport/parse error
+            last_err = f"{type(e).__name__}: {e}"
+
+        if not retryable or attempt >= retries + 1:
+            break
+        sys.stderr.write(f"[{model}] attempt {attempt} failed ({last_err[:80]}); retrying...\n")
+        sys.stderr.flush()
+        time.sleep(retry_delay * attempt)  # linear backoff: 2s, 4s, ...
+
+    return (model, None, last_err)
 
 
 def list_providers(base_url, token):
@@ -133,6 +167,10 @@ def main():
     ap.add_argument("--base-url", default=DEFAULT_BASE)
     ap.add_argument("--workspace", default=None,
                     help="run the worker in this dir (sets cwd) + apply the AGENT_LOG.md ledger protocol")
+    ap.add_argument("--retries", type=int, default=2,
+                    help="retries on transient failure: empty reply / 5xx / network (default 2)")
+    ap.add_argument("--retry-delay", type=float, default=2.0,
+                    help="base seconds between retries, grows linearly (default 2.0)")
     ap.add_argument("--providers", action="store_true", help="list available CLIs and exit")
     ap.add_argument("--json", action="store_true", help="print raw JSON results")
     args = ap.parse_args()
@@ -161,12 +199,14 @@ def main():
     results = []
     if len(targets) == 1:
         results.append(consult(targets[0], args.prompt, args.system, args.timeout,
-                               args.base_url, args.token, args.workspace))
+                               args.base_url, args.token, args.workspace,
+                               args.retries, args.retry_delay))
     else:
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(targets)) as ex:
             futs = {
                 ex.submit(consult, m, args.prompt, args.system, args.timeout,
-                          args.base_url, args.token, args.workspace): m
+                          args.base_url, args.token, args.workspace,
+                          args.retries, args.retry_delay): m
                 for m in targets
             }
             # Preserve a stable order (claude, gemini, openai) regardless of finish time.
