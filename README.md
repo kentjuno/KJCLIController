@@ -1,8 +1,28 @@
 # KJ CLIController: Local AI CLI Gateway
 
+[![License: MIT](https://img.shields.io/github/license/kentjuno/KJCLIController?color=blue)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/kentjuno/KJCLIController?sort=semver&color=brightgreen)](https://github.com/kentjuno/KJCLIController/releases)
+[![Live Demo](https://img.shields.io/github/deployments/kentjuno/KJCLIController/github-pages?label=live%20demo)](https://kentjuno.github.io/KJCLIController/)
+[![Made with Rust](https://img.shields.io/badge/Made%20with-Rust-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+
 A secure, local network gateway written in Rust that exposes local AI Command Line Interfaces (CLIs) — Anthropic's **Claude Code**, Google's **Gemini/Agy CLI**, and OpenAI's **Codex CLI** — through a unified, OpenAI-compatible HTTP API endpoint. It ships with a modern, dark-mode SPA Chat Dashboard, a marketing landing page, an optional Windows system-tray mode, and a **multi-agent orchestration** toolkit.
 
 > 🎼 **New — Multi-Agent Orchestration:** turn *any* desktop agent into a conductor that delegates step-by-step subtasks to the other local CLIs, keeping a shared `AGENT_LOG.md` ledger between them. Just hand an agent the `http://localhost:8080/agents` link. See **[ANNOUNCEMENT.md](ANNOUNCEMENT.md)** and the [Multi-Agent Orchestration](#multi-agent-orchestration) section below.
+
+---
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Repository Structure](#repository-structure)
+- [Quickstart](#quickstart)
+- [Endpoints at a Glance](#endpoints-at-a-glance)
+- [Web UI Chat Dashboard](#web-ui-chat-dashboard)
+- [API Reference](#api-reference)
+- [Python Client Example](#python-client-example)
+- [Claude Code Skill: "Consult the CLIs"](#claude-code-skill-consult-the-clis)
+- [Multi-Agent Orchestration](#multi-agent-orchestration)
+- [Support / Donate](#-support--donate)
 
 ---
 
