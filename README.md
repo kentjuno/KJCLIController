@@ -299,6 +299,20 @@ Override the gateway location/token with `--base-url` / `--token` or the env var
 
 ---
 
+## Multi-Agent Orchestration
+
+Use one desktop AI agent as a **conductor** that plans a task and delegates step-by-step subtasks to the *other* local CLIs through the gateway — keeping a shared understanding across each step. It is **orchestrator-agnostic** (drive it with Gemini/Antigravity, Claude Code, or Codex) and **portable across machines**.
+
+The shared memory lives on disk: a ledger file `AGENT_LOG.md` in your working directory that every delegated worker reads first and appends to. Pass your project folder as the request's `cwd` so workers run inside it with real file access.
+
+Get started:
+1. Copy the protocol files from [`orchestration/`](orchestration/) into your project root: `ORCHESTRATION.md` plus the pointer for your conductor — `CLAUDE.md`, `AGENTS.md` (Codex), or `GEMINI.md` (Antigravity).
+2. Paste the **bootstrap prompt** (see the in-app guide at `/api/guide`) as your first message, or rely on the pointer file your agent reads automatically.
+
+The full protocol — ledger format, context envelope, role guidance, and portability rules — is in [`orchestration/ORCHESTRATION.md`](orchestration/ORCHESTRATION.md).
+
+---
+
 ## ☕ Support / Donate
 
 **KJ CLIController** is built and maintained by **KJ** as free, open-source software. If this project saves you time or you'd like to support continued development, a small donation is hugely appreciated — thank you! 🙏

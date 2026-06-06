@@ -270,6 +270,7 @@
             <a href="#powershell-example" class="nav-link">PowerShell Example</a>
             <a href="#python-example" class="nav-link">Python Script Example</a>
             <a href="#file-attachments" class="nav-link">Uploading Attachments</a>
+            <a href="#multi-agent" class="nav-link">Multi-Agent Orchestration</a>
             <a href="/chat" class="nav-link" style="margin-top: 1.5rem; color: var(--accent-green);">← Back to Chat UI</a>
         </div>
     </div>
@@ -468,6 +469,62 @@ def ask_local_cli(model, prompt, system_prompt=None, image_path=None, cwd=None):
   "port": 8080,
   "token": "my-secret-lan-token"
 }</code></pre>
+        </section>
+
+        <!-- ── Section: Multi-Agent Orchestration ── -->
+        <section id="multi-agent">
+            <h2>Multi-Agent Orchestration</h2>
+            <p>
+                The real power of this gateway is using <strong>one desktop AI agent as a conductor</strong> that chats with you, makes a plan, and then delegates step-by-step subtasks to the <em>other</em> local CLIs — so the conductor and the workers keep a shared understanding across each step. This works no matter which agent you drive (Gemini/Antigravity, Claude Code, or Codex), and it stays portable across machines.
+            </p>
+
+            <div class="card">
+                <h3>How shared context works</h3>
+                <p>
+                    The gateway is <strong>stateless</strong> and each CLI runs as a fresh one-shot process, so the shared memory lives <strong>on disk</strong>: a ledger file <code>AGENT_LOG.md</code> in your working directory. Every delegated worker reads it first and appends what it did; the conductor reads it before each next step. Pass your project folder as the <code>cwd</code> field so workers run inside it with real file access.
+                </p>
+                <p style="margin-bottom: 0;">
+                    Suggested roles: <span class="badge green">gemini</span> main conductor &nbsp;·&nbsp; <span class="badge">claude</span> senior technical advisor (use sparingly) &nbsp;·&nbsp; <span class="badge">openai</span> broad context / overview.
+                </p>
+            </div>
+
+            <h3>Setup (one time)</h3>
+            <ol style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.8; padding-left: 1.25rem;">
+                <li>Install &amp; authenticate the CLIs you want: <code>claude</code>, <code>agy</code> (Antigravity), <code>codex</code>.</li>
+                <li>Start the gateway, then confirm <code class="url">GET /api/providers</code> shows them as <code>available: true</code>.</li>
+                <li>Copy the protocol files from the repo's <code>orchestration/</code> folder into the root of the project you want to work in: <code>ORCHESTRATION.md</code> plus the pointer for your conductor — <code>CLAUDE.md</code> (Claude Code), <code>AGENTS.md</code> (Codex), or <code>GEMINI.md</code> (Antigravity).</li>
+                <li>(Optional) Put <code>consult.py</code> on your <code>PATH</code> for a quick delegation command on any machine.</li>
+                <li>Start chatting with your agent. Paste the bootstrap prompt below as your first message (or rely on the pointer file the agent reads automatically).</li>
+            </ol>
+
+            <h3>Bootstrap prompt (paste as your first message)</h3>
+            <p>This single message tells any agent it can use the multi-agent panel through CLIController:</p>
+            <div class="code-container">
+                <button class="copy-btn" onclick="copyCode('bootstrap-code')">Copy</button>
+                <pre><code id="bootstrap-code">You can orchestrate other local AI agents through the KJCLIController gateway
+(OpenAI-compatible) at http://localhost:8080, token "my-secret-lan-token".
+Models: claude = Claude Code, gemini = Gemini/Antigravity, openai = Codex.
+Check availability at GET /api/providers.
+
+To collaborate across steps, keep a shared ledger AGENT_LOG.md in the working
+directory: read it before each step, and instruct every delegated worker to read
+it first and append a dated summary (what it did, key decisions, files changed).
+Pass the workspace as the "cwd" field so workers run inside it.
+
+Delegate with:  python consult.py --model <claude|gemini|openai> --prompt "..."
+(or --all to ask the whole panel), or any OpenAI SDK with
+base_url = http://localhost:8080/v1.
+
+Roles: gemini = main conductor, claude = senior technical advisor (use sparingly),
+codex = broad context/overview. Use paths relative to the workspace; never hardcode
+absolute paths. If a provider is unavailable, skip it and continue.
+
+Full protocol: read ORCHESTRATION.md in the working directory.</code></pre>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+                * Portability: always use paths <strong>relative to the workspace</strong>, and never assume a CLI is installed — check <code class="url">/api/providers</code> and degrade gracefully. See <code>ORCHESTRATION.md</code> for the full protocol.
+            </p>
         </section>
     </div>
 
