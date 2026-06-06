@@ -26,7 +26,8 @@ Optional helper (a small dependency-free Python CLI you can download from the ga
 ```
 curl -O http://localhost:8080/consult.py
 python consult.py --model claude --workspace . --prompt "..."        # one worker
-python consult.py --models claude,openai --prompt "..."             # the two strongest workers
+python consult.py --models claude,openai --prompt "..."             # a fast subset (skip slow agy)
+python consult.py --model gemini --timeout 300 --prompt "..."        # gemini is slow — give it time
 ```
 
 ## 2. Keep shared context across steps (the important part)
@@ -51,14 +52,16 @@ The `consult.py --workspace .` helper applies this wrapping automatically.
 
 ## 3. Roles (suggested)
 
-Usually **Gemini/Antigravity is the conductor you are already chatting in**, so you normally do
-NOT route to `gemini` through the gateway (and `agy` is the slowest backend). Focus your
-delegation on the two strongest, most quota-efficient workers:
+All three are first-class workers — pick by fit:
 
 - **claude (Claude Code)** — senior technical advisor; hard design, architecture, and review calls.
 - **openai (Codex)** — broad context and overview; implementation, plan coherence, cross-checks.
+- **gemini (Antigravity / agy)** — fully capable for code and reasoning; it is the **slowest**
+  backend, so give it a generous `--timeout` (e.g. 300+) and use it for work you can wait on —
+  it reports back when finished.
 
-`gemini` stays available as a fallback third opinion, but prefer **Claude + Codex**.
+If you are already chatting in Antigravity directly, you often don't *need* to route to
+`gemini` through the gateway — but it stays fully available whenever you want to delegate to it.
 Do not delegate to yourself.
 
 ## 4. Portability rules (you may be on any machine)

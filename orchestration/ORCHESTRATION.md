@@ -55,15 +55,17 @@ NEXT: <suggested next step>
 
 ## 4. Roles (tune to your own quota)
 
-Usually **Gemini/Antigravity is the conductor you are already chatting in**, so you normally
-do not route to `gemini` through the gateway (and `agy` is the slowest backend). Concentrate
-delegation on the two strongest, most quota-efficient workers — call them directly or with
-`consult.py --models claude,openai`:
+All three are first-class workers:
 
 - **claude (Claude Code)** — senior technical advisor; hard design, architecture, and review calls.
 - **openai (Codex)** — broad context and overview; implementation, plan coherence, cross-checks.
+- **gemini (Antigravity / agy)** — fully capable for code and reasoning, but the **slowest**
+  backend; give it a generous `--timeout` (300+) and use it for work you can wait on — it
+  reports back when finished.
 
-`gemini` stays available as a fallback third opinion, but prefer **Claude + Codex**.
+If you are already chatting in Antigravity directly, you often don't need to route to `gemini`
+through the gateway — but it stays fully available for delegation whenever you want it. For a
+quick two-worker delegation, `consult.py --models claude,openai` simply skips the slow backend.
 
 ## 5. Portability rules (critical when this runs on other machines)
 

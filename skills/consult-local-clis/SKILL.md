@@ -74,10 +74,9 @@ Read the user's phrasing and pick the narrowest interpretation that fits:
    **`openai` = OpenAI Codex** (so "codex"/"openai"/"GPT" all map to `--model openai`).
 
 2. **User said "mấy ông CLI" / "cả ba" / "all the models" / "the panel"** → use `--all`
-   and then synthesize (see below). For *delegated work* (not just a poll of opinions),
-   prefer the two strongest, most quota-efficient workers with
-   `--models claude,openai` — `gemini`/`agy` is the slowest backend, so reserve it for a
-   fallback third opinion.
+   and then synthesize (see below). `gemini`/`agy` is the slowest backend, so when speed
+   matters you can delegate to just `--models claude,openai`; when it doesn't, `gemini` is
+   fully capable — give it a longer `--timeout` (300+) and let it run.
 
 3. **Ambiguous "tham vấn" with no target** → this is the default: pick the single CLI best
    suited to the task rather than spamming all three. Rough guide:
@@ -86,6 +85,7 @@ Read the user's phrasing and pick the narrowest interpretation that fits:
    - **Claude Code (`claude`)** — agentic/codebase reasoning, multi-file design, careful
      prose, nuanced judgement calls.
    - **Gemini (`gemini`)** — vision/multimodal, very large context, broad world knowledge.
+     Slowest backend, so give it a longer `--timeout` (300+) when you use it.
 
    If the question is genuinely a "who's right / I want multiple perspectives" question
    (architecture decisions, tradeoffs, reviews), prefer `--all` even when unprompted — that
